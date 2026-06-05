@@ -29,6 +29,12 @@ const DIAS_INICIALES = [
   { dia: "Dom", litros: 0 },
 ]
 
+// Índice en DIAS_INICIALES del día actual (semana arranca lunes).
+// Date.getDay(): Dom=0, Lun=1, ..., Sáb=6 → convertimos a Lun=0, ..., Dom=6.
+function getIndiceHoy() {
+  return (new Date().getDay() + 6) % 7
+}
+
 export function OrdenoView() {
   const [semana, setSemana] = useState(DIAS_INICIALES)
   const [nuevoValor, setNuevoValor] = useState("")
@@ -43,10 +49,12 @@ export function OrdenoView() {
       try {
         const { data, date } = JSON.parse(guardado)
         
-        // Si la fecha guardada es distinta a hoy, reseteamos el valor de "hoy" (último registro)
+        // Si la fecha guardada es distinta a hoy, reseteamos el valor del día actual
+        // (todavía no se cargó) para que el usuario lo registre.
         if (date !== hoy) {
-          const resetData = data.map((item: any, index: number) => 
-            index === data.length - 1 ? { ...item, litros: 0 } : item
+          const indiceHoy = getIndiceHoy()
+          const resetData = data.map((item: any, index: number) =>
+            index === indiceHoy ? { ...item, litros: 0 } : item
           )
           setSemana(resetData)
         } else {
@@ -69,17 +77,18 @@ export function OrdenoView() {
     const litros = Number(nuevoValor)
     if (isNaN(litros) || litros <= 0) return
 
+    const indiceHoy = getIndiceHoy()
     const nuevaSemana = [...semana]
-    nuevaSemana[nuevaSemana.length - 1] = { 
-      ...nuevaSemana[nuevaSemana.length - 1], 
-      litros: litros 
+    nuevaSemana[indiceHoy] = {
+      ...nuevaSemana[indiceHoy],
+      litros: litros,
     }
     setSemana(nuevaSemana)
     setNuevoValor("")
     setOpen(false)
   }
 
-  const hoy = semana[semana.length - 1].litros
+  const hoy = semana[getIndiceHoy()].litros
   const totalSemana = semana.reduce((acc, curr) => acc + curr.litros, 0)
   const promedioCabra = (hoy / 32).toFixed(1)
 
