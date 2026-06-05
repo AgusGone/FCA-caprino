@@ -10,7 +10,6 @@ import {
   X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { cabras } from "@/lib/data"
 
 export type SectionId =
   | "rutinas"
@@ -35,11 +34,13 @@ export function Sidebar({
   onSelect,
   open,
   onClose,
+  cabrasCount,
 }: {
   active: SectionId
   onSelect: (id: SectionId) => void
   open: boolean
   onClose: () => void
+  cabrasCount: number
 }) {
   return (
     <>
@@ -106,7 +107,7 @@ export function Sidebar({
         <div className="px-6 py-6">
           <p className="text-sm text-muted-foreground">Rodeo activo</p>
           <p className="text-2xl font-semibold tracking-tight">
-            {cabras.length} cabras
+            {cabrasCount} cabras
           </p>
         </div>
       </aside>

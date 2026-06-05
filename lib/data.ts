@@ -18,6 +18,8 @@ export type Cabra = {
 };
 
 // --- DATOS ---
+// Las cabras viven en Supabase. Estos arrays siguen siendo estáticos porque
+// los consume Alimentación y por ahora no se editan desde la app.
 
 export const racionDiaria = [
   { estado: "En lactancia", cantidad: "1.5 kg" },
@@ -30,37 +32,4 @@ export const racionDiaria = [
 export const horariosSuministro = [
   { turno: "Mañana", hora: "07:00 AM" },
   { turno: "Tarde", hora: "04:00 PM" },
-];
-
-export const cabras: Cabra[] = [
-  { 
-    id: "0001", 
-    caravana: "001", 
-    nacimiento: "2023-01-01", 
-    edad: "1 año", 
-    estado: "En lactancia", 
-    partos: 1, 
-    promedio: 2.5, 
-    dot: "verde", 
-    produccion: [], 
-    historialPartos: [], 
-    sanidad: [],
-    crias: [],
-    observaciones: "" // <--- AGREGA ESTO
-  },
-  { 
-    id: "0002", 
-    caravana: "002", 
-    nacimiento: "2023-01-01", 
-    edad: "1 año", 
-    estado: "En lactancia", 
-    partos: 1, 
-    promedio: 2.5, 
-    dot: "verde", 
-    produccion: [], 
-    historialPartos: [], 
-    sanidad: [],
-    crias: [],
-    observaciones: "" // <--- AGREGA ESTO
-  }
 ];

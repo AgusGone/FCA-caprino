@@ -1,6 +1,15 @@
 "use client"
 
-import { useState, useCallback, FormEvent, ReactNode } from "react"
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  FormEvent,
+  ReactNode,
+  Dispatch,
+  SetStateAction,
+} from "react"
 import {
   Search,
   Pencil,
@@ -31,7 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { type Cabra, type EstadoReproductivo, cabras as initialCabras } from "@/lib/data"
+import type { Cabra, EstadoReproductivo } from "@/lib/data"
 import { cn } from "@/lib/utils"
 
 const dotColor: Record<Cabra["dot"], string> = {
@@ -43,10 +52,10 @@ const dotColor: Record<Cabra["dot"], string> = {
 
 function calcularEdad(nacimiento: string): string {
   const nac = new Date(nacimiento)
-  const hoy = new Date()
-  const diffMs = hoy.getTime() - nac.getTime()
-  const diffYears = diffMs / (1000 * 60 * 60 * 24 * 365.25)
-  return `${diffYears.toFixed(1)} años`
+  if (Number.isNaN(nac.getTime())) return "—"
+  const diffYears =
+    (Date.now() - nac.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
+  return `${Math.max(diffYears, 0).toFixed(1)} años`
 }
 
 function EstadoBadge({ estado }: { estado: EstadoReproductivo }) {
@@ -80,43 +89,57 @@ const estadosReproductivos: EstadoReproductivo[] = [
   "Cabrita",
 ]
 
-export function FichasView({
-  onConsult,
-}: {
+type FichasViewProps = {
+  cabras: Cabra[]
+  setCabras: Dispatch<SetStateAction<Cabra[]>>
+  loading: boolean
+  error: string | null
   onConsult: (prompt: string) => void
-}) {
-  const [cabras, setCabras] = useState<Cabra[]>(initialCabras)
+}
+
+export function FichasView({ cabras, setCabras, loading, error }: FichasViewProps) {
   const [query, setQuery] = useState("")
-  const [selectedId, setSelectedId] = useState(initialCabras[0]?.id || "")
+  const [selectedId, setSelectedId] = useState<string>("")
   const [tab, setTab] = useState<Tab>("Ficha")
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  
+  const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+
   // Form state
   const [formCaravana, setFormCaravana] = useState("")
   const [formNacimiento, setFormNacimiento] = useState("")
   const [formEstado, setFormEstado] = useState<EstadoReproductivo>("En lactancia")
-  const [formPartos, setFormPartos] = useState("0")
-  const [formPromedio, setFormPromedio] = useState("0.0")
   const [formCrias, setFormCrias] = useState("")
   const [formObservaciones, setFormObservaciones] = useState("")
 
   const formEdad = formNacimiento ? calcularEdad(formNacimiento) : "—"
   const isEditing = editingId !== null
 
-  const filtered = cabras.filter((c) =>
-    c.caravana.toLowerCase().includes(query.toLowerCase()),
+  const filtered = useMemo(
+    () => cabras.filter((c) => c.caravana.toLowerCase().includes(query.toLowerCase())),
+    [cabras, query],
   )
+
+  // Seleccionar la primera cabra una vez que llegan
+  useEffect(() => {
+    if (!selectedId && cabras.length > 0) {
+      setSelectedId(cabras[0].id)
+    }
+    if (selectedId && !cabras.some((c) => c.id === selectedId)) {
+      setSelectedId(cabras[0]?.id ?? "")
+    }
+  }, [cabras, selectedId])
+
   const cabra = cabras.find((c) => c.id === selectedId)
 
   const resetForm = useCallback(() => {
     setFormCaravana("")
     setFormNacimiento("")
     setFormEstado("En lactancia")
-    setFormPartos("0")
-    setFormPromedio("0.0")
     setFormCrias("")
     setFormObservaciones("")
+    setFormError(null)
   }, [])
 
   const openCreateModal = useCallback(() => {
@@ -130,10 +153,9 @@ export function FichasView({
     setFormCaravana(cabraEditada.caravana)
     setFormNacimiento(cabraEditada.nacimiento)
     setFormEstado(cabraEditada.estado)
-    setFormPartos(String(cabraEditada.partos))
-    setFormPromedio(String(cabraEditada.promedio))
     setFormCrias(cabraEditada.crias.join(", "))
     setFormObservaciones(cabraEditada.observaciones || "")
+    setFormError(null)
     setModalOpen(true)
   }, [])
 
@@ -143,42 +165,62 @@ export function FichasView({
     resetForm()
   }, [resetForm])
 
-  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    
-    const criasArray = formCrias.split(",").map(c => c.trim()).filter(c => c !== "")
+    setFormError(null)
+    setSaving(true)
 
-    const newCabra: Cabra = {
-      id: editingId || Math.floor(Math.random() * 10000).toString(),
+    const criasArray = formCrias
+      .split(",")
+      .map((c) => c.trim())
+      .filter((c) => c !== "")
+
+    const payload = {
       caravana: formCaravana,
       nacimiento: formNacimiento,
-      edad: formEdad,
       estado: formEstado,
-      partos: parseInt(formPartos),
-      promedio: parseFloat(formPromedio),
-      dot: "verde",
-      produccion: [],
-      historialPartos: [],
-      sanidad: [],
       crias: criasArray,
-      observaciones: formObservaciones
+      observaciones: formObservaciones,
     }
 
-    if (editingId) {
-      setCabras((prev) => prev.map((c) => (c.id === editingId ? newCabra : c)))
-    } else {
-      setCabras((prev) => [newCabra, ...prev])
+    try {
+      const res = await fetch(
+        editingId ? `/api/cabras/${editingId}` : "/api/cabras",
+        {
+          method: editingId ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      )
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || "Error al guardar")
+      const saved = json.cabra as Cabra
+
+      if (editingId) {
+        setCabras((prev) => prev.map((c) => (c.id === editingId ? saved : c)))
+      } else {
+        setCabras((prev) => [saved, ...prev])
+      }
+      setSelectedId(saved.id)
+      closeFormModal()
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Error al guardar")
+    } finally {
+      setSaving(false)
     }
-    
-    setSelectedId(newCabra.id)
-    closeFormModal()
   }
 
-  function handleDelete(cabraId: string) {
-    const restantes = cabras.filter((c) => c.id !== cabraId)
-    setCabras(restantes)
-    setSelectedId(restantes[0]?.id ?? "")
-    setTab("Ficha")
+  async function handleDelete(cabraId: string) {
+    try {
+      const res = await fetch(`/api/cabras/${cabraId}`, { method: "DELETE" })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || "Error al eliminar")
+      setCabras((prev) => prev.filter((c) => c.id !== cabraId))
+      setTab("Ficha")
+    } catch (err) {
+      console.error(err)
+      alert(err instanceof Error ? err.message : "Error al eliminar")
+    }
   }
 
   return (
@@ -205,8 +247,8 @@ export function FichasView({
           <DialogHeader>
             <DialogTitle>{isEditing ? "Editar cabra" : "Nueva cabra"}</DialogTitle>
             <DialogDescription>
-               {isEditing 
-                ? "Actualiza los datos del ejemplar seleccionado." 
+              {isEditing
+                ? "Actualiza los datos del ejemplar seleccionado."
                 : "Completa el formulario para registrar un nuevo ejemplar."}
             </DialogDescription>
           </DialogHeader>
@@ -218,6 +260,7 @@ export function FichasView({
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium">Fecha de nacimiento</label>
               <input type="date" value={formNacimiento} onChange={(e) => setFormNacimiento(e.target.value)} required className="w-full rounded-xl border border-border bg-background px-4 py-2.5 outline-none" />
+              <span className="text-xs text-muted-foreground">{formEdad}</span>
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium">Estado reproductivo</label>
@@ -230,24 +273,29 @@ export function FichasView({
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium">Caravanas de crías (separadas por coma)</label>
-              <input 
-                placeholder="Ej: 25, 27" 
-                value={formCrias} 
-                onChange={(e) => setFormCrias(e.target.value)} 
-                className="rounded-xl border border-border bg-background px-4 py-2.5 outline-none focus:ring-2 focus:ring-ring" 
+              <input
+                placeholder="Ej: 25, 27"
+                value={formCrias}
+                onChange={(e) => setFormCrias(e.target.value)}
+                className="rounded-xl border border-border bg-background px-4 py-2.5 outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium">Observaciones</label>
-              <textarea 
-                value={formObservaciones} 
-                onChange={(e) => setFormObservaciones(e.target.value)} 
-                className="rounded-xl border border-border bg-background px-4 py-2.5 outline-none focus:ring-2 focus:ring-ring min-h-[80px]" 
+              <textarea
+                value={formObservaciones}
+                onChange={(e) => setFormObservaciones(e.target.value)}
+                className="rounded-xl border border-border bg-background px-4 py-2.5 outline-none focus:ring-2 focus:ring-ring min-h-[80px]"
               />
             </div>
+            {formError && (
+              <p className="text-sm text-destructive">{formError}</p>
+            )}
             <div className="flex justify-end gap-3">
-              <button type="button" onClick={closeFormModal} className="px-5 py-2.5 rounded-xl border">Cancelar</button>
-              <button type="submit" className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium">Guardar</button>
+              <button type="button" onClick={closeFormModal} disabled={saving} className="px-5 py-2.5 rounded-xl border disabled:opacity-50">Cancelar</button>
+              <button type="submit" disabled={saving} className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium disabled:opacity-50">
+                {saving ? "Guardando..." : "Guardar"}
+              </button>
             </div>
           </form>
         </DialogContent>
@@ -260,28 +308,42 @@ export function FichasView({
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar..." className="w-full rounded-xl border border-border bg-card py-3 pl-10 pr-3 outline-none" />
           </div>
 
+          {loading && (
+            <p className="px-2 text-sm text-muted-foreground">Cargando cabras...</p>
+          )}
+          {error && (
+            <p className="px-2 text-sm text-destructive">{error}</p>
+          )}
+          {!loading && !error && filtered.length === 0 && (
+            <p className="px-2 text-sm text-muted-foreground">
+              {cabras.length === 0
+                ? "Aún no hay cabras. Creá la primera con \"Nueva cabra\"."
+                : "Sin resultados."}
+            </p>
+          )}
+
           {filtered.map((c) => {
-            const isSelected = c.id === selectedId;
+            const isSelected = c.id === selectedId
             return (
-              <button 
-                key={c.id} 
-                onClick={() => setSelectedId(c.id)} 
+              <button
+                key={c.id}
+                onClick={() => setSelectedId(c.id)}
                 className={cn(
-                  "flex items-center gap-3 rounded-2xl border px-3 py-3 text-left", 
-                  isSelected 
-                    ? "bg-[#F5E6CC] border-l-4 border-l-primary" 
-                    : "border-transparent hover:bg-card"
+                  "flex items-center gap-3 rounded-2xl border px-3 py-3 text-left",
+                  isSelected
+                    ? "bg-[#F5E6CC] border-l-4 border-l-primary"
+                    : "border-transparent hover:bg-card",
                 )}
               >
                 <span className={cn(
                   "flex size-11 items-center justify-center rounded-full text-xs font-bold",
-                  isSelected ? "bg-primary/20 text-black" : "bg-primary/10 text-foreground"
+                  isSelected ? "bg-primary/20 text-black" : "bg-primary/10 text-foreground",
                 )}>
-                  #{c.id}
+                  {c.caravana}
                 </span>
                 <span className={cn(
                   "flex-1 font-semibold",
-                  isSelected ? "text-black" : "text-foreground"
+                  isSelected ? "text-black" : "text-foreground",
                 )}>
                   Caravana {c.caravana}
                 </span>
@@ -335,11 +397,16 @@ export function FichasView({
                         </Row>
                     </div>
                 )}
+                {tab !== "Ficha" && (
+                  <p className="text-muted-foreground">Sección pendiente.</p>
+                )}
               </div>
             </div>
           ) : (
             <div className="flex h-full items-center justify-center">
-              <p className="text-muted-foreground">Selecciona una cabra.</p>
+              <p className="text-muted-foreground">
+                {loading ? "Cargando..." : "Selecciona una cabra."}
+              </p>
             </div>
           )}
         </div>
