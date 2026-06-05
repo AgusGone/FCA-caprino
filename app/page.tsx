@@ -69,7 +69,12 @@ export default function Page() {
   const content = {
     rutinas: <RutinasView />,
     ordeno: <OrdenoView cabrasEnLactancia={cabrasEnLactancia} />,
-    alimentacion: <AlimentacionView onConsult={consultAssistant} />,
+    alimentacion: (
+      <AlimentacionView
+        onConsult={consultAssistant}
+        cabrasEnLactancia={cabrasEnLactancia}
+      />
+    ),
     limpieza: <LimpiezaView />,
     fichas: (
       <FichasView

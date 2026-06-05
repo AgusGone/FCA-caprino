@@ -3,8 +3,10 @@ import { racionDiaria, horariosSuministro } from "@/lib/data"
 
 export function AlimentacionView({
   onConsult,
+  cabrasEnLactancia,
 }: {
   onConsult: (prompt: string) => void
+  cabrasEnLactancia: number
 }) {
   return (
     <div className="mx-auto max-w-4xl px-5 py-8 md:px-10">
@@ -30,7 +32,7 @@ export function AlimentacionView({
 
       {/* Ración */}
       <h2 className="mt-8 text-sm font-medium uppercase tracking-wider text-muted-foreground">
-        Ración diaria recomendada (32 cabras en lactancia)
+        Ración diaria recomendada ({cabrasEnLactancia} cabras en lactancia)
       </h2>
       <div className="mt-4 rounded-2xl bg-card px-6 py-2">
         {racionDiaria.map((item, i) => (
@@ -69,7 +71,7 @@ export function AlimentacionView({
       <button
         onClick={() =>
           onConsult(
-            "Necesito alternativas forrajeras al heno de alfalfa para 32 cabras en lactancia. El stock de heno me dura 18 días. ¿Qué opciones tengo?",
+            `Necesito alternativas forrajeras al heno de alfalfa para ${cabrasEnLactancia} cabras en lactancia. El stock de heno me dura 18 días. ¿Qué opciones tengo?`,
           )
         }
         className="mt-6 inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-3 text-base font-medium transition-colors hover:bg-secondary"
