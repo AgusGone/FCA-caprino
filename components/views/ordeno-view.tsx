@@ -217,7 +217,7 @@ export function OrdenoView({
           <LineChart data={semana} margin={{ top: 8, right: 12, bottom: 0, left: -16 }}>
             <CartesianGrid vertical={false} stroke="var(--border)" />
             <XAxis dataKey="dia" tickLine={false} axisLine={false} tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} />
-            <YAxis domain={[40, 70]} tickLine={false} axisLine={false} tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} />
+            <YAxis domain={[0, "auto"]} tickLine={false} axisLine={false} tick={{ fill: "var(--muted-foreground)", fontSize: 12 }} />
             <Line type="monotone" dataKey="litros" stroke="var(--primary)" strokeWidth={2.5} dot={{ fill: "var(--primary)", r: 4 }} />
           </LineChart>
         </ResponsiveContainer>
