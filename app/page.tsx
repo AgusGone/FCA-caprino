@@ -62,9 +62,13 @@ export default function Page() {
     selectSection("asistente")
   }
 
+  const cabrasEnLactancia = cabras.filter(
+    (c) => c.estado === "En lactancia",
+  ).length
+
   const content = {
     rutinas: <RutinasView />,
-    ordeno: <OrdenoView />,
+    ordeno: <OrdenoView cabrasEnLactancia={cabrasEnLactancia} />,
     alimentacion: <AlimentacionView onConsult={consultAssistant} />,
     limpieza: <LimpiezaView />,
     fichas: (

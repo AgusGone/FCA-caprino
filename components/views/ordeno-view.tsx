@@ -54,7 +54,11 @@ function construirSemana(registros: RegistroApi[]): DiaSemana[] {
   })
 }
 
-export function OrdenoView() {
+export function OrdenoView({
+  cabrasEnLactancia,
+}: {
+  cabrasEnLactancia: number
+}) {
   const [semana, setSemana] = useState<DiaSemana[]>(() => construirSemana([]))
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -97,7 +101,8 @@ export function OrdenoView() {
 
   const hoy = semana[indiceHoy]?.litros ?? 0
   const totalSemana = semana.reduce((acc, curr) => acc + curr.litros, 0)
-  const promedioCabra = (hoy / 32).toFixed(1)
+  const promedioCabra =
+    cabrasEnLactancia > 0 ? (hoy / cabrasEnLactancia).toFixed(1) : "—"
 
   async function handleGuardar(e: React.FormEvent) {
     e.preventDefault()
@@ -193,7 +198,9 @@ export function OrdenoView() {
         <div className="rounded-2xl bg-card p-6">
             <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Promedio cabra</p>
             <p className="mt-3 text-3xl font-semibold tracking-tight">{promedioCabra} L</p>
-            <p className="mt-2 text-sm text-muted-foreground">32 en lactancia</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {cabrasEnLactancia} en lactancia
+            </p>
         </div>
         <div className="rounded-2xl bg-card p-6">
             <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Semana</p>
