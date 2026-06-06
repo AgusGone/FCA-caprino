@@ -26,6 +26,9 @@ importers:
       '@radix-ui/react-slot':
         specifier: ^1.2.4
         version: 1.2.4(@types/react@19.0.7)(react@19.2.7)
+      '@supabase/ssr':
+        specifier: ^0.10.3
+        version: 0.10.3(@supabase/supabase-js@2.107.0)
       '@supabase/supabase-js':
         specifier: ^2.45.0
         version: 2.107.0
@@ -742,6 +745,11 @@ packages:
     resolution: {integrity: sha512-cF2KYdR3JIn9YlWGeluY9S0G+otqTdL6hB8GzpatlEIY6fZudCcyFo6Dc3+X9tjeb+x9XcIyNAk9qhNAknjH1A==}
     engines: {node: '>=20.0.0'}
 
+  '@supabase/ssr@0.10.3':
+    resolution: {integrity: sha512-ux2CJgX89h0Fz2lY7ZNafNG2SkXpyRc5dz77K9eKeBLPdtywQixKwIuetDeIViAJBp/buOUVmgj8PVesOklNpw==}
+    peerDependencies:
+      '@supabase/supabase-js': ^2.105.3
+
   '@supabase/storage-js@2.107.0':
     resolution: {integrity: sha512-/X8OOVwKBn8aVKuHAGOz2yLA0d2OauqhVuy4mNtN+o7wttHOgx1/j+pqOzlsjmhOHrYykF6AJNZhs3gKZzcMUw==}
     engines: {node: '>=20.0.0'}
@@ -987,6 +995,10 @@ packages:
   cookie@0.7.1:
     resolution: {integrity: sha512-6DnInpx7SJ2AK3+CTUE/ZM0vWTUboZCegxhC2xiIydHR9jNuTAASBrfEpHhiGOZw/nX51bHt6YQl8jsGo4y/0w==}
     engines: {node: '>= 0.6'}
+
+  cookie@1.1.1:
+    resolution: {integrity: sha512-ei8Aos7ja0weRpFzJnEA9UHJ/7XQmqglbRwnf2ATjcB9Wq874VKH9kfjjirM6UhU2/E5fFYadylyhFldcqSidQ==}
+    engines: {node: '>=18'}
 
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
@@ -2159,6 +2171,11 @@ snapshots:
       '@supabase/phoenix': 0.4.2
       tslib: 2.8.1
 
+  '@supabase/ssr@0.10.3(@supabase/supabase-js@2.107.0)':
+    dependencies:
+      '@supabase/supabase-js': 2.107.0
+      cookie: 1.1.1
+
   '@supabase/storage-js@2.107.0':
     dependencies:
       iceberg-js: 0.8.1
@@ -2379,6 +2396,8 @@ snapshots:
   console-control-strings@1.1.0: {}
 
   cookie@0.7.1: {}
+
+  cookie@1.1.1: {}
 
   csstype@3.2.3: {}
 

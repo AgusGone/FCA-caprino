@@ -6,6 +6,8 @@ import {
   Sprout,
   Brush,
   IdCard,
+  Users,
+  LogOut,
   X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -16,14 +18,16 @@ export type SectionId =
   | "alimentacion"
   | "limpieza"
   | "fichas"
+  | "usuarios"
 
 // Lista reordenada
-const nav: { id: SectionId; label: string; icon: typeof ListChecks }[] = [
+const nav: { id: SectionId; label: string; icon: typeof ListChecks; adminOnly?: boolean }[] = [
   { id: "fichas", label: "Fichas de cabras", icon: IdCard },
   { id: "rutinas", label: "Rutinas del día", icon: ListChecks },
   { id: "ordeno", label: "Ordeño", icon: Droplet },
   { id: "alimentacion", label: "Alimentación", icon: Sprout },
   { id: "limpieza", label: "Limpieza", icon: Brush },
+  { id: "usuarios", label: "Usuarios", icon: Users, adminOnly: true },
 ]
 
 export function Sidebar({
@@ -32,13 +36,20 @@ export function Sidebar({
   open,
   onClose,
   cabrasCount,
+  isAdmin,
+  userEmail,
+  onLogout,
 }: {
   active: SectionId
   onSelect: (id: SectionId) => void
   open: boolean
   onClose: () => void
   cabrasCount: number
+  isAdmin: boolean
+  userEmail: string
+  onLogout: () => void
 }) {
+  const visibleNav = nav.filter((n) => !n.adminOnly || isAdmin)
   return (
     <>
       {/* Overlay mobile */}
@@ -80,7 +91,7 @@ export function Sidebar({
         </div>
 
         <nav className="flex flex-1 flex-col gap-1 px-3">
-          {nav.map(({ id, label, icon: Icon }) => {
+          {visibleNav.map(({ id, label, icon: Icon }) => {
             const isActive = active === id
             return (
               <button
@@ -106,6 +117,17 @@ export function Sidebar({
           <p className="text-2xl font-semibold tracking-tight">
             {cabrasCount} cabras
           </p>
+          <div className="mt-4 border-t border-border pt-4">
+            <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
+            <button
+              type="button"
+              onClick={onLogout}
+              className="mt-2 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+            >
+              <LogOut className="size-4" />
+              Cerrar sesión
+            </button>
+          </div>
         </div>
       </aside>
     </>
