@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { ArrowUpRight, ArrowDown, Plus, X, Pencil, Check } from "lucide-react"
+import { Plus, X, Pencil, Check } from "lucide-react"
 
 function parseKg(cantidad: string): number {
   const n = parseFloat(cantidad.replace(",", ".").replace(/[^\d.]/g, ""))
@@ -39,10 +39,8 @@ function loadFromStorage<T>(key: string, fallback: T): T {
 }
 
 export function AlimentacionView({
-  onConsult,
   cabrasEnLactancia,
 }: {
-  onConsult: (prompt: string) => void
   cabrasEnLactancia: number
 }) {
   const [raciones, setRaciones] = useState<RacionItem[]>(racionesDefault)
@@ -283,23 +281,6 @@ export function AlimentacionView({
         )}
       </div>
 
-      <button
-        onClick={() =>
-          onConsult(
-            `Necesito alternativas forrajeras al heno de alfalfa para ${cabrasEnLactancia} cabras en lactancia. ¿Qué opciones tengo?`,
-          )
-        }
-        className="mt-6 inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-3 text-base font-medium transition-colors hover:bg-secondary"
-      >
-        ¿Alternativas forrajeras?
-        <ArrowUpRight className="size-4" />
-      </button>
-
-      <div className="mt-10 flex justify-center">
-        <span className="flex size-10 items-center justify-center rounded-full border border-border text-muted-foreground">
-          <ArrowDown className="size-5" />
-        </span>
-      </div>
     </div>
   )
 }

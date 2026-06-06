@@ -102,11 +102,14 @@ type FichasViewProps = {
   setCabras: Dispatch<SetStateAction<Cabra[]>>
   loading: boolean
   error: string | null
-  onConsult: (prompt: string) => void
 }
+
+const filtroEstados = ["Todos", ...estadosReproductivos] as const
+type FiltroEstado = (typeof filtroEstados)[number]
 
 export function FichasView({ cabras, setCabras, loading, error }: FichasViewProps) {
   const [query, setQuery] = useState("")
+  const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>("Todos")
   const [selectedId, setSelectedId] = useState<string>("")
   const [tab, setTab] = useState<Tab>("Ficha")
   const [modalOpen, setModalOpen] = useState(false)
@@ -129,8 +132,13 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
   const isEditing = editingId !== null
 
   const filtered = useMemo(
-    () => cabras.filter((c) => c.caravana.toLowerCase().includes(query.toLowerCase())),
-    [cabras, query],
+    () =>
+      cabras.filter(
+        (c) =>
+          c.caravana.toLowerCase().includes(query.toLowerCase()) &&
+          (filtroEstado === "Todos" || c.estado === filtroEstado),
+      ),
+    [cabras, query, filtroEstado],
   )
 
   // Seleccionar la primera cabra una vez que llegan
@@ -491,9 +499,21 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
 
       <div className="grid flex-1 gap-px overflow-hidden border-t border-border md:grid-cols-[20rem_1fr]">
         <div className="flex flex-col gap-3 overflow-y-auto bg-background p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar..." className="w-full rounded-xl border border-border bg-card py-3 pl-10 pr-3 outline-none" />
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar..." className="w-full rounded-xl border border-border bg-card py-3 pl-10 pr-3 outline-none" />
+            </div>
+            <Select value={filtroEstado} onValueChange={(v) => setFiltroEstado(v as FiltroEstado)}>
+              <SelectTrigger className="w-32 shrink-0 rounded-xl border border-border bg-card">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {filtroEstados.map((e) => (
+                  <SelectItem key={e} value={e}>{e}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {loading && (

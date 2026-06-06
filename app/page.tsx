@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { Menu } from "lucide-react"
 import { AlimentacionView } from "@/components/views/alimentacion-view"
-import { AsistenteView } from "@/components/views/asistente-view"
 import { FichasView } from "@/components/views/fichas-view"
 import { LimpiezaView } from "@/components/views/limpieza-view"
 import { OrdenoView } from "@/components/views/ordeno-view"
@@ -17,13 +16,11 @@ const titles: Record<SectionId, string> = {
   alimentacion: "Alimentación",
   limpieza: "Limpieza",
   fichas: "Fichas",
-  asistente: "Asistente",
 }
 
 export default function Page() {
   const [active, setActive] = useState<SectionId>("fichas")
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [assistantPrompt, setAssistantPrompt] = useState("")
   const [cabras, setCabras] = useState<Cabra[]>([])
   const [cabrasLoading, setCabrasLoading] = useState(true)
   const [cabrasError, setCabrasError] = useState<string | null>(null)
@@ -57,11 +54,6 @@ export default function Page() {
     setSidebarOpen(false)
   }
 
-  function consultAssistant(prompt: string) {
-    setAssistantPrompt(prompt)
-    selectSection("asistente")
-  }
-
   const cabrasEnLactancia = cabras.filter(
     (c) => c.estado === "En lactancia",
   ).length
@@ -69,12 +61,7 @@ export default function Page() {
   const content = {
     rutinas: <RutinasView />,
     ordeno: <OrdenoView cabrasEnLactancia={cabrasEnLactancia} />,
-    alimentacion: (
-      <AlimentacionView
-        onConsult={consultAssistant}
-        cabrasEnLactancia={cabrasEnLactancia}
-      />
-    ),
+    alimentacion: <AlimentacionView cabrasEnLactancia={cabrasEnLactancia} />,
     limpieza: <LimpiezaView />,
     fichas: (
       <FichasView
@@ -82,16 +69,11 @@ export default function Page() {
         setCabras={setCabras}
         loading={cabrasLoading}
         error={cabrasError}
-        onConsult={consultAssistant}
       />
-    ),
-    asistente: (
-      <AsistenteView key={assistantPrompt || "empty"} initialPrompt={assistantPrompt} />
     ),
   }[active]
 
-  const scrollMode =
-    active === "fichas" || active === "asistente" ? "overflow-hidden" : "overflow-y-auto"
+  const scrollMode = active === "fichas" ? "overflow-hidden" : "overflow-y-auto"
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">

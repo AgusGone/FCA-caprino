@@ -6,7 +6,6 @@ import {
   Sprout,
   Brush,
   IdCard,
-  MessageSquareText,
   X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -17,7 +16,6 @@ export type SectionId =
   | "alimentacion"
   | "limpieza"
   | "fichas"
-  | "asistente"
 
 // Lista reordenada
 const nav: { id: SectionId; label: string; icon: typeof ListChecks }[] = [
@@ -26,7 +24,6 @@ const nav: { id: SectionId; label: string; icon: typeof ListChecks }[] = [
   { id: "ordeno", label: "Ordeño", icon: Droplet },
   { id: "alimentacion", label: "Alimentación", icon: Sprout },
   { id: "limpieza", label: "Limpieza", icon: Brush },
-  { id: "asistente", label: "Asistente IA", icon: MessageSquareText },
 ]
 
 export function Sidebar({

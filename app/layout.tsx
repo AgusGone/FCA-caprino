@@ -7,7 +7,7 @@ const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-mono' })
 
 export const metadata: Metadata = {
   title: 'FCA CRABRAS — Gestión caprina',
-  description: 'FCA CRABRAS: app de gestión para tambos caprinos. Rutinas, ordeño, alimentación, fichas de cabras y asistente IA.',
+  description: 'FCA CRABRAS: app de gestión para tambos caprinos. Rutinas, ordeño, alimentación y fichas de cabras.',
   generator: 'v0.app',
 }
 
