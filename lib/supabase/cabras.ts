@@ -22,9 +22,13 @@ const dotPorEstado: Record<EstadoReproductivo, Dot> = {
 function calcularEdad(nacimiento: string): string {
   const nac = new Date(nacimiento)
   if (Number.isNaN(nac.getTime())) return "Sin fecha"
-  const diffYears =
-    (Date.now() - nac.getTime()) / (1000 * 60 * 60 * 24 * 365.25)
-  return `${Math.max(diffYears, 0).toFixed(1)} años`
+  const diffMs = Math.max(Date.now() - nac.getTime(), 0)
+  const diffYears = diffMs / (1000 * 60 * 60 * 24 * 365.25)
+  if (diffYears < 1) {
+    const meses = Math.max(Math.floor(diffMs / (1000 * 60 * 60 * 24 * 30.4375)), 0)
+    return `${meses} ${meses === 1 ? "mes" : "meses"}`
+  }
+  return `${diffYears.toFixed(1)} años`
 }
 
 export class CabrasApiError extends Error {
