@@ -5,12 +5,12 @@ import { Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const inicial = [
-  { zona: "Sala de ordeño", frecuencia: "Diaria", hecho: true },
+  { zona: "Sala de ordeño", frecuencia: "Diaria", hecho: false },
   { zona: "Comederos", frecuencia: "Diaria", hecho: false },
   { zona: "Bebederos", frecuencia: "Diaria", hecho: false },
-  { zona: "Corral de descanso", frecuencia: "2 veces/semana", hecho: false },
-  { zona: "Equipo de ordeño (CIP)", frecuencia: "Tras cada ordeño", hecho: true },
-  { zona: "Tanque de frío", frecuencia: "Tras recolección", hecho: false },
+  { zona: "Recria", frecuencia: "2 veces/semana", hecho: false },
+  { zona: "Silo", frecuencia: "Tras cada ordeño", hecho: false },
+  { zona: "Arbol", frecuencia: "Tras recolección", hecho: false },
 ]
 
 export function LimpiezaView() {
@@ -47,14 +47,7 @@ export function LimpiezaView() {
                 {it.hecho && <Check className="size-4" />}
               </span>
               <span className="flex-1">
-                <span
-                  className={cn(
-                    "block text-base",
-                    it.hecho && "text-muted-foreground line-through",
-                  )}
-                >
-                  {it.zona}
-                </span>
+                <span className="block text-base">{it.zona}</span>
                 <span className="block text-sm text-muted-foreground">
                   {it.frecuencia}
                 </span>

@@ -15,6 +15,7 @@ import {
   Pencil,
   Trash2,
   Plus,
+  X,
 } from "lucide-react"
 import {
   Dialog,
@@ -81,6 +82,9 @@ function EstadoBadge({ estado }: { estado: EstadoReproductivo }) {
 const tabs = ["Ficha", "Producción", "Partos", "Sanidad"] as const
 type Tab = (typeof tabs)[number]
 
+type PartoEntry = { fecha: string; crias: number; observacion: string }
+type SanidadEntry = { fecha: string; evento: string; detalle: string }
+
 const estadosReproductivos: EstadoReproductivo[] = [
   "En lactancia",
   "Gestante",
@@ -112,6 +116,10 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
   const [formEstado, setFormEstado] = useState<EstadoReproductivo>("En lactancia")
   const [formCrias, setFormCrias] = useState("")
   const [formObservaciones, setFormObservaciones] = useState("")
+  const [formPartos, setFormPartos] = useState<PartoEntry[]>([])
+  const [formSanidad, setFormSanidad] = useState<SanidadEntry[]>([])
+
+  const esCabrita = formEstado === "Cabrita"
 
   const formEdad = formNacimiento ? calcularEdad(formNacimiento) : "—"
   const isEditing = editingId !== null
@@ -132,6 +140,18 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
   }, [cabras, selectedId])
 
   const cabra = cabras.find((c) => c.id === selectedId)
+  const cabraEsCabrita = cabra?.estado === "Cabrita"
+  const visibleTabs = useMemo<readonly Tab[]>(
+    () =>
+      cabraEsCabrita
+        ? tabs.filter((t) => t !== "Producción" && t !== "Partos")
+        : tabs,
+    [cabraEsCabrita],
+  )
+
+  useEffect(() => {
+    if (!visibleTabs.includes(tab)) setTab("Ficha")
+  }, [visibleTabs, tab])
 
   const resetForm = useCallback(() => {
     setFormCaravana("")
@@ -139,6 +159,8 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
     setFormEstado("En lactancia")
     setFormCrias("")
     setFormObservaciones("")
+    setFormPartos([])
+    setFormSanidad([])
     setFormError(null)
   }, [])
 
@@ -155,6 +177,8 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
     setFormEstado(cabraEditada.estado)
     setFormCrias(cabraEditada.crias.join(", "))
     setFormObservaciones(cabraEditada.observaciones || "")
+    setFormPartos(cabraEditada.historialPartos ?? [])
+    setFormSanidad(cabraEditada.sanidad ?? [])
     setFormError(null)
     setModalOpen(true)
   }, [])
@@ -170,10 +194,19 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
     setFormError(null)
     setSaving(true)
 
-    const criasArray = formCrias
-      .split(",")
-      .map((c) => c.trim())
-      .filter((c) => c !== "")
+    const criasArray = esCabrita
+      ? []
+      : formCrias
+          .split(",")
+          .map((c) => c.trim())
+          .filter((c) => c !== "")
+
+    const partosLimpios = esCabrita
+      ? []
+      : formPartos.filter((p) => p.fecha.trim() !== "")
+    const sanidadLimpia = formSanidad.filter(
+      (s) => s.evento.trim() !== "" && s.fecha.trim() !== "",
+    )
 
     const payload = {
       caravana: formCaravana,
@@ -181,6 +214,9 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
       estado: formEstado,
       crias: criasArray,
       observaciones: formObservaciones,
+      historialPartos: partosLimpios,
+      sanidad: sanidadLimpia,
+      partos: partosLimpios.length,
     }
 
     try {
@@ -243,7 +279,7 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
       </header>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{isEditing ? "Editar cabra" : "Nueva cabra"}</DialogTitle>
             <DialogDescription>
@@ -271,15 +307,17 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium">Caravanas de crías (separadas por coma)</label>
-              <input
-                placeholder="Ej: 25, 27"
-                value={formCrias}
-                onChange={(e) => setFormCrias(e.target.value)}
-                className="rounded-xl border border-border bg-background px-4 py-2.5 outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
+            {!esCabrita && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-medium">Caravanas de crías (separadas por coma)</label>
+                <input
+                  placeholder="Ej: 25, 27"
+                  value={formCrias}
+                  onChange={(e) => setFormCrias(e.target.value)}
+                  className="rounded-xl border border-border bg-background px-4 py-2.5 outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+            )}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium">Observaciones</label>
               <textarea
@@ -287,6 +325,152 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
                 onChange={(e) => setFormObservaciones(e.target.value)}
                 className="rounded-xl border border-border bg-background px-4 py-2.5 outline-none focus:ring-2 focus:ring-ring min-h-[80px]"
               />
+            </div>
+
+            {!esCabrita && (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Partos</label>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormPartos((prev) => [
+                        ...prev,
+                        { fecha: "", crias: 1, observacion: "" },
+                      ])
+                    }
+                    className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-xs font-medium hover:bg-secondary"
+                  >
+                    <Plus className="size-3.5" /> Agregar
+                  </button>
+                </div>
+                {formPartos.length === 0 && (
+                  <p className="text-xs text-muted-foreground">Sin partos registrados.</p>
+                )}
+                {formPartos.map((p, i) => (
+                  <div key={i} className="flex flex-col gap-1.5 rounded-xl border border-border p-3">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="date"
+                        value={p.fecha}
+                        onChange={(e) =>
+                          setFormPartos((prev) =>
+                            prev.map((it, idx) => (idx === i ? { ...it, fecha: e.target.value } : it)),
+                          )
+                        }
+                        className="flex-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm outline-none"
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        value={p.crias}
+                        onChange={(e) =>
+                          setFormPartos((prev) =>
+                            prev.map((it, idx) =>
+                              idx === i ? { ...it, crias: Number(e.target.value) || 0 } : it,
+                            ),
+                          )
+                        }
+                        className="w-20 rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm outline-none"
+                        placeholder="crías"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormPartos((prev) => prev.filter((_, idx) => idx !== i))
+                        }
+                        className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary"
+                        aria-label="Eliminar parto"
+                      >
+                        <X className="size-4" />
+                      </button>
+                    </div>
+                    <input
+                      placeholder="Observación"
+                      value={p.observacion}
+                      onChange={(e) =>
+                        setFormPartos((prev) =>
+                          prev.map((it, idx) =>
+                            idx === i ? { ...it, observacion: e.target.value } : it,
+                          ),
+                        )
+                      }
+                      className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm outline-none"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Sanidad / Medicaciones</label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormSanidad((prev) => [
+                      ...prev,
+                      { fecha: "", evento: "", detalle: "" },
+                    ])
+                  }
+                  className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-xs font-medium hover:bg-secondary"
+                >
+                  <Plus className="size-3.5" /> Agregar
+                </button>
+              </div>
+              {formSanidad.length === 0 && (
+                <p className="text-xs text-muted-foreground">Sin medicaciones registradas.</p>
+              )}
+              {formSanidad.map((s, i) => (
+                <div key={i} className="flex flex-col gap-1.5 rounded-xl border border-border p-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      placeholder="Medicamento / evento"
+                      value={s.evento}
+                      onChange={(e) =>
+                        setFormSanidad((prev) =>
+                          prev.map((it, idx) =>
+                            idx === i ? { ...it, evento: e.target.value } : it,
+                          ),
+                        )
+                      }
+                      className="flex-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setFormSanidad((prev) => prev.filter((_, idx) => idx !== i))
+                      }
+                      className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary"
+                      aria-label="Eliminar medicación"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                  <input
+                    type="date"
+                    value={s.fecha}
+                    onChange={(e) =>
+                      setFormSanidad((prev) =>
+                        prev.map((it, idx) => (idx === i ? { ...it, fecha: e.target.value } : it)),
+                      )
+                    }
+                    className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm outline-none"
+                  />
+                  <input
+                    placeholder="Dosis / detalle (opcional)"
+                    value={s.detalle}
+                    onChange={(e) =>
+                      setFormSanidad((prev) =>
+                        prev.map((it, idx) =>
+                          idx === i ? { ...it, detalle: e.target.value } : it,
+                        ),
+                      )
+                    }
+                    className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm outline-none"
+                  />
+                </div>
+              ))}
             </div>
             {formError && (
               <p className="text-sm text-destructive">{formError}</p>
@@ -379,7 +563,7 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
                 </div>
               </div>
               <div className="mt-6 border-b flex gap-6">
-                {tabs.map((t) => (
+                {visibleTabs.map((t) => (
                   <button key={t} onClick={() => setTab(t)} className={cn("pb-3 border-b-2", tab === t ? "border-primary text-primary" : "border-transparent")}>{t}</button>
                 ))}
               </div>
@@ -388,16 +572,56 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
                     <div className="flex flex-col">
                         <Row label="Caravana">{cabra.caravana}</Row>
                         <Row label="Estado">{cabra.estado}</Row>
-                        <Row label="Partos">{cabra.partos}</Row>
-                        <Row label="Crías">
-                           {cabra.crias.length > 0 ? cabra.crias.join(", ") : "Sin crías"}
-                        </Row>
+                        {!cabraEsCabrita && <Row label="Partos">{cabra.partos}</Row>}
+                        {!cabraEsCabrita && (
+                          <Row label="Crías">
+                             {cabra.crias.length > 0 ? cabra.crias.join(", ") : "Sin crías"}
+                          </Row>
+                        )}
                         <Row label="Observaciones">
                            <span className="text-sm italic">{cabra.observaciones || "Sin observaciones"}</span>
                         </Row>
                     </div>
                 )}
-                {tab !== "Ficha" && (
+                {tab === "Partos" && !cabraEsCabrita && (
+                  <div className="flex flex-col">
+                    {cabra.historialPartos.length === 0 ? (
+                      <p className="text-muted-foreground">Sin partos registrados.</p>
+                    ) : (
+                      cabra.historialPartos.map((p, i) => (
+                        <div key={i} className="border-b py-3">
+                          <div className="flex justify-between">
+                            <span className="font-medium">{p.fecha}</span>
+                            <span className="text-muted-foreground">{p.crias} cría{p.crias === 1 ? "" : "s"}</span>
+                          </div>
+                          {p.observacion && (
+                            <p className="text-sm text-muted-foreground mt-1">{p.observacion}</p>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+                {tab === "Sanidad" && (
+                  <div className="flex flex-col">
+                    {cabra.sanidad.length === 0 ? (
+                      <p className="text-muted-foreground">Sin registros sanitarios.</p>
+                    ) : (
+                      cabra.sanidad.map((s, i) => (
+                        <div key={i} className="border-b py-3">
+                          <div className="flex justify-between">
+                            <span className="font-medium">{s.evento}</span>
+                            <span className="text-muted-foreground">{s.fecha}</span>
+                          </div>
+                          {s.detalle && (
+                            <p className="text-sm text-muted-foreground mt-1">{s.detalle}</p>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+                {tab === "Producción" && !cabraEsCabrita && (
                   <p className="text-muted-foreground">Sección pendiente.</p>
                 )}
               </div>

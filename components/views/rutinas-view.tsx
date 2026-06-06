@@ -69,14 +69,7 @@ export function RutinasView() {
               <span className="w-14 shrink-0 font-mono text-sm text-muted-foreground">
                 {t.hora}
               </span>
-              <span
-                className={cn(
-                  "flex-1 text-base",
-                  t.hecho && "text-muted-foreground line-through",
-                )}
-              >
-                {t.tarea}
-              </span>
+              <span className="flex-1 text-base">{t.tarea}</span>
             </button>
           </li>
         ))}
