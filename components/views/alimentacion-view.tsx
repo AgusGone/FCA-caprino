@@ -1,7 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { ArrowUpRight, ArrowDown, Plus, X, Pencil, Check } from "lucide-react"
+
+function parseKg(cantidad: string): number {
+  const n = parseFloat(cantidad.replace(",", ".").replace(/[^\d.]/g, ""))
+  return Number.isFinite(n) ? n : 0
+}
 
 type RacionItem = { nombre: string; cantidad: string }
 type HorarioItem = { hora: string; momento: string; detalle: string }
@@ -62,26 +67,27 @@ export function AlimentacionView({
     }
   }, [horarios])
 
+  const consumoHoy = useMemo(() => {
+    const lactancia = raciones.find((r) =>
+      r.nombre.toLowerCase().includes("lactancia"),
+    )
+    const kgPorCabra = lactancia ? parseKg(lactancia.cantidad) : 0
+    return kgPorCabra * cabrasEnLactancia
+  }, [raciones, cabrasEnLactancia])
+
   return (
     <div className="mx-auto max-w-4xl px-5 py-8 md:px-10">
-      {/* Stat cards */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl bg-card p-6">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Consumo hoy
-          </p>
-          <p className="mt-3 text-4xl font-semibold tracking-tight">128 kg</p>
-          <p className="mt-2 text-sm text-muted-foreground">Heno + balanceado</p>
-        </div>
-        <div className="rounded-2xl bg-card p-6">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Stock heno
-          </p>
-          <p className="mt-3 text-4xl font-semibold tracking-tight text-destructive">
-            18 días
-          </p>
-          <p className="mt-2 text-sm text-muted-foreground">Reponer pronto</p>
-        </div>
+      {/* Stat card */}
+      <div className="rounded-2xl bg-card p-6">
+        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          Consumo hoy
+        </p>
+        <p className="mt-3 text-4xl font-semibold tracking-tight">
+          {consumoHoy % 1 === 0 ? consumoHoy : consumoHoy.toFixed(1)} kg
+        </p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Según ración de lactancia × {cabrasEnLactancia} cabras
+        </p>
       </div>
 
       {/* Ración */}
@@ -280,7 +286,7 @@ export function AlimentacionView({
       <button
         onClick={() =>
           onConsult(
-            `Necesito alternativas forrajeras al heno de alfalfa para ${cabrasEnLactancia} cabras en lactancia. El stock de heno me dura 18 días. ¿Qué opciones tengo?`,
+            `Necesito alternativas forrajeras al heno de alfalfa para ${cabrasEnLactancia} cabras en lactancia. ¿Qué opciones tengo?`,
           )
         }
         className="mt-6 inline-flex items-center gap-2 rounded-xl border border-border bg-card px-5 py-3 text-base font-medium transition-colors hover:bg-secondary"
