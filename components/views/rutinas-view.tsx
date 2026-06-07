@@ -1,12 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Check, Pencil, Plus, X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useSharedState } from "@/lib/use-shared-state"
 
 type Tarea = { hora: string; tarea: string; hecho: boolean }
-
-const STORAGE_KEY = "fca:rutinas"
 
 const inicial: Tarea[] = [
   { hora: "08:00", tarea: "Limpieza recinto", hecho: false },
@@ -18,30 +17,12 @@ const inicial: Tarea[] = [
   { hora: "17:30", tarea: "Ordeño de la tarde", hecho: false },
 ]
 
-function load(): Tarea[] {
-  if (typeof window === "undefined") return inicial
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (!raw) return inicial
-    return JSON.parse(raw) as Tarea[]
-  } catch {
-    return inicial
-  }
-}
-
 export function RutinasView() {
-  const [tareas, setTareas] = useState<Tarea[]>(inicial)
+  const { state: tareas, setState: setTareas, status, error } = useSharedState<Tarea[]>(
+    "rutinas",
+    inicial,
+  )
   const [editing, setEditing] = useState(false)
-
-  useEffect(() => {
-    setTareas(load())
-  }, [])
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tareas))
-    }
-  }, [tareas])
 
   const completas = tareas.filter((t) => t.hecho).length
   const total = tareas.length || 1
@@ -59,6 +40,13 @@ export function RutinasView() {
           {editing ? "Listo" : "Editar"}
         </button>
       </div>
+
+      {status === "loading" && (
+        <p className="mt-4 text-sm text-muted-foreground">Sincronizando…</p>
+      )}
+      {status === "error" && (
+        <p className="mt-4 text-sm text-destructive">{error}</p>
+      )}
 
       <div className="mt-6 rounded-2xl bg-card p-6">
         <div className="flex items-center justify-between text-sm">

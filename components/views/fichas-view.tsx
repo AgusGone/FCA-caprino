@@ -41,7 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { Cabra, EstadoReproductivo } from "@/lib/data"
+import type { Cabra, EstadoReproductivo, PesoEntry, Sexo } from "@/lib/data"
 import { cn } from "@/lib/utils"
 
 const dotColor: Record<Cabra["dot"], string> = {
@@ -52,15 +52,27 @@ const dotColor: Record<Cabra["dot"], string> = {
 }
 
 function calcularEdad(nacimiento: string): string {
-  const nac = new Date(nacimiento)
+  if (!nacimiento) return "—"
+  // Parseamos YYYY-MM-DD como medianoche local (no UTC) para evitar desfases por
+  // huso horario que mostraban "—" o edad negativa el mismo día de carga.
+  const m = nacimiento.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  const nac = m
+    ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+    : new Date(nacimiento)
   if (Number.isNaN(nac.getTime())) return "—"
-  const diffMs = Math.max(Date.now() - nac.getTime(), 0)
-  const diffYears = diffMs / (1000 * 60 * 60 * 24 * 365.25)
-  if (diffYears < 1) {
-    const meses = Math.max(Math.floor(diffMs / (1000 * 60 * 60 * 24 * 30.4375)), 0)
-    return `${meses} ${meses === 1 ? "mes" : "meses"}`
+  const diffMs = Date.now() - nac.getTime()
+  if (diffMs < 0) return "—"
+  const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  if (dias < 1) return "Hoy"
+  if (dias < 14) return `${dias} ${dias === 1 ? "día" : "días"}`
+  if (dias < 60) {
+    const semanas = Math.floor(dias / 7)
+    return `${semanas} ${semanas === 1 ? "semana" : "semanas"}`
   }
-  return `${diffYears.toFixed(1)} años`
+  const meses = Math.floor(dias / 30.4375)
+  if (meses < 12) return `${meses} ${meses === 1 ? "mes" : "meses"}`
+  const anios = dias / 365.25
+  return `${anios.toFixed(1)} años`
 }
 
 function EstadoBadge({ estado }: { estado: EstadoReproductivo }) {
@@ -83,7 +95,7 @@ function EstadoBadge({ estado }: { estado: EstadoReproductivo }) {
   )
 }
 
-const tabs = ["Ficha", "Producción", "Partos", "Sanidad"] as const
+const tabs = ["Ficha", "Producción", "Partos", "Sanidad", "Peso"] as const
 type Tab = (typeof tabs)[number]
 
 type PartoEntry = { fecha: string; crias: number; observacion: string }
@@ -96,6 +108,8 @@ const estadosReproductivos: EstadoReproductivo[] = [
   "Vacía",
   "Cabrita",
 ]
+
+const sexos: Sexo[] = ["Hembra", "Macho"]
 
 type FichasViewProps = {
   cabras: Cabra[]
@@ -120,11 +134,13 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
   // Form state
   const [formCaravana, setFormCaravana] = useState("")
   const [formNacimiento, setFormNacimiento] = useState("")
+  const [formSexo, setFormSexo] = useState<Sexo>("Hembra")
   const [formEstado, setFormEstado] = useState<EstadoReproductivo>("En lactancia")
   const [formCrias, setFormCrias] = useState("")
   const [formObservaciones, setFormObservaciones] = useState("")
   const [formPartos, setFormPartos] = useState<PartoEntry[]>([])
   const [formSanidad, setFormSanidad] = useState<SanidadEntry[]>([])
+  const [formPesos, setFormPesos] = useState<PesoEntry[]>([])
 
   const esCabrita = formEstado === "Cabrita"
 
@@ -168,11 +184,13 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
   const resetForm = useCallback(() => {
     setFormCaravana("")
     setFormNacimiento("")
+    setFormSexo("Hembra")
     setFormEstado("En lactancia")
     setFormCrias("")
     setFormObservaciones("")
     setFormPartos([])
     setFormSanidad([])
+    setFormPesos([])
     setFormError(null)
   }, [])
 
@@ -186,11 +204,13 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
     setEditingId(cabraEditada.id)
     setFormCaravana(cabraEditada.caravana)
     setFormNacimiento(cabraEditada.nacimiento)
+    setFormSexo(cabraEditada.sexo ?? "Hembra")
     setFormEstado(cabraEditada.estado)
     setFormCrias(cabraEditada.crias.join(", "))
     setFormObservaciones(cabraEditada.observaciones || "")
     setFormPartos(cabraEditada.historialPartos ?? [])
     setFormSanidad(cabraEditada.sanidad ?? [])
+    setFormPesos(cabraEditada.pesos ?? [])
     setFormError(null)
     setModalOpen(true)
   }, [])
@@ -219,15 +239,20 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
     const sanidadLimpia = formSanidad.filter(
       (s) => s.evento.trim() !== "" && s.fecha.trim() !== "",
     )
+    const pesosLimpios = formPesos
+      .filter((p) => p.fecha.trim() !== "" && Number.isFinite(p.kg) && p.kg > 0)
+      .sort((a, b) => a.fecha.localeCompare(b.fecha))
 
     const payload = {
       caravana: formCaravana,
       nacimiento: formNacimiento,
+      sexo: formSexo,
       estado: formEstado,
       crias: criasArray,
       observaciones: formObservaciones,
       historialPartos: partosLimpios,
       sanidad: sanidadLimpia,
+      pesos: pesosLimpios,
       partos: partosLimpios.length,
     }
 
@@ -309,6 +334,15 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
               <label className="text-sm font-medium">Fecha de nacimiento</label>
               <input type="date" value={formNacimiento} onChange={(e) => setFormNacimiento(e.target.value)} required className="w-full rounded-xl border border-border bg-background px-4 py-2.5 outline-none" />
               <span className="text-xs text-muted-foreground">{formEdad}</span>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium">Sexo</label>
+              <Select value={formSexo} onValueChange={(v) => setFormSexo(v as Sexo)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {sexos.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium">Estado reproductivo</label>
@@ -413,6 +447,67 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
                 ))}
               </div>
             )}
+
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Registro de peso</label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormPesos((prev) => [
+                      ...prev,
+                      { fecha: new Date().toISOString().slice(0, 10), kg: 0 },
+                    ])
+                  }
+                  className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-xs font-medium hover:bg-secondary"
+                >
+                  <Plus className="size-3.5" /> Agregar
+                </button>
+              </div>
+              {formPesos.length === 0 && (
+                <p className="text-xs text-muted-foreground">Sin pesos registrados.</p>
+              )}
+              {formPesos.map((p, i) => (
+                <div key={i} className="flex items-center gap-2 rounded-xl border border-border p-3">
+                  <input
+                    type="date"
+                    value={p.fecha}
+                    onChange={(e) =>
+                      setFormPesos((prev) =>
+                        prev.map((it, idx) => (idx === i ? { ...it, fecha: e.target.value } : it)),
+                      )
+                    }
+                    className="flex-1 rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm outline-none"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.1"
+                    value={p.kg}
+                    onChange={(e) =>
+                      setFormPesos((prev) =>
+                        prev.map((it, idx) =>
+                          idx === i ? { ...it, kg: Number(e.target.value) || 0 } : it,
+                        ),
+                      )
+                    }
+                    className="w-24 rounded-lg border border-border bg-background px-2.5 py-1.5 text-sm outline-none"
+                    placeholder="kg"
+                  />
+                  <span className="text-xs text-muted-foreground">kg</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormPesos((prev) => prev.filter((_, idx) => idx !== i))
+                    }
+                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary"
+                    aria-label="Eliminar peso"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
 
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
@@ -595,6 +690,7 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
                 {tab === "Ficha" && (
                     <div className="flex flex-col">
                         <Row label="Caravana">{cabra.caravana}</Row>
+                        <Row label="Sexo">{cabra.sexo}</Row>
                         <Row label="Estado">{cabra.estado}</Row>
                         {!cabraEsCabrita && <Row label="Partos">{cabra.partos}</Row>}
                         {!cabraEsCabrita && (
@@ -647,6 +743,43 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
                 )}
                 {tab === "Producción" && !cabraEsCabrita && (
                   <p className="text-muted-foreground">Sección pendiente.</p>
+                )}
+                {tab === "Peso" && (
+                  <div className="flex flex-col">
+                    {(cabra.pesos?.length ?? 0) === 0 ? (
+                      <p className="text-muted-foreground">Sin pesos registrados.</p>
+                    ) : (
+                      <>
+                        {(() => {
+                          const ordenados = [...cabra.pesos].sort((a, b) =>
+                            b.fecha.localeCompare(a.fecha),
+                          )
+                          const ultimo = ordenados[0]
+                          return (
+                            <div className="mb-4 rounded-2xl bg-card p-5">
+                              <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                                Último peso
+                              </p>
+                              <p className="mt-1 text-3xl font-semibold">
+                                {ultimo.kg} kg
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {ultimo.fecha}
+                              </p>
+                            </div>
+                          )
+                        })()}
+                        {[...cabra.pesos]
+                          .sort((a, b) => b.fecha.localeCompare(a.fecha))
+                          .map((p, i) => (
+                            <div key={i} className="border-b py-3 flex justify-between">
+                              <span className="font-medium">{p.fecha}</span>
+                              <span className="text-muted-foreground">{p.kg} kg</span>
+                            </div>
+                          ))}
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

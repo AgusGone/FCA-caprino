@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { Plus, X, Pencil, Check } from "lucide-react"
+import { useSharedState } from "@/lib/use-shared-state"
 
 function parseKg(cantidad: string): number {
   const n = parseFloat(cantidad.replace(",", ".").replace(/[^\d.]/g, ""))
@@ -24,46 +25,27 @@ const horariosDefault: HorarioItem[] = [
   { hora: "16:00", momento: "Tarde", detalle: "Heno" },
 ]
 
-const STORAGE_RACIONES = "fca:alimentacion:raciones"
-const STORAGE_HORARIOS = "fca:alimentacion:horarios"
-
-function loadFromStorage<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback
-  try {
-    const raw = window.localStorage.getItem(key)
-    if (!raw) return fallback
-    return JSON.parse(raw) as T
-  } catch {
-    return fallback
-  }
-}
-
 export function AlimentacionView({
   cabrasEnLactancia,
 }: {
   cabrasEnLactancia: number
 }) {
-  const [raciones, setRaciones] = useState<RacionItem[]>(racionesDefault)
-  const [horarios, setHorarios] = useState<HorarioItem[]>(horariosDefault)
+  const {
+    state: raciones,
+    setState: setRaciones,
+    status: statusR,
+    error: errorR,
+  } = useSharedState<RacionItem[]>("alimentacion_raciones", racionesDefault)
+  const {
+    state: horarios,
+    setState: setHorarios,
+    status: statusH,
+    error: errorH,
+  } = useSharedState<HorarioItem[]>("alimentacion_horarios", horariosDefault)
   const [editRaciones, setEditRaciones] = useState(false)
   const [editHorarios, setEditHorarios] = useState(false)
-
-  useEffect(() => {
-    setRaciones(loadFromStorage(STORAGE_RACIONES, racionesDefault))
-    setHorarios(loadFromStorage(STORAGE_HORARIOS, horariosDefault))
-  }, [])
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_RACIONES, JSON.stringify(raciones))
-    }
-  }, [raciones])
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_HORARIOS, JSON.stringify(horarios))
-    }
-  }, [horarios])
+  const syncing = statusR === "loading" || statusH === "loading"
+  const syncError = errorR || errorH
 
   const consumoHoy = useMemo(() => {
     const lactancia = raciones.find((r) =>
@@ -75,6 +57,12 @@ export function AlimentacionView({
 
   return (
     <div className="mx-auto max-w-4xl px-5 py-8 md:px-10">
+      {syncing && (
+        <p className="mb-4 text-sm text-muted-foreground">Sincronizando…</p>
+      )}
+      {syncError && (
+        <p className="mb-4 text-sm text-destructive">{syncError}</p>
+      )}
       {/* Stat card */}
       <div className="rounded-2xl bg-card p-6">
         <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">

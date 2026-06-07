@@ -1,4 +1,4 @@
-import type { Cabra, EstadoReproductivo } from "@/lib/data"
+import type { Cabra, EstadoReproductivo, Sexo } from "@/lib/data"
 
 const estadosReproductivos = [
   "En lactancia",
@@ -7,6 +7,8 @@ const estadosReproductivos = [
   "Vacía",
   "Cabrita",
 ] as const
+
+const sexos = ["Hembra", "Macho"] as const
 
 const dotValues = ["verde", "azul", "naranja", "gris"] as const
 type Dot = (typeof dotValues)[number]
@@ -20,15 +22,27 @@ const dotPorEstado: Record<EstadoReproductivo, Dot> = {
 }
 
 function calcularEdad(nacimiento: string): string {
-  const nac = new Date(nacimiento)
+  if (!nacimiento) return "Sin fecha"
+  // Parseamos YYYY-MM-DD como medianoche local para evitar desfases por huso
+  // horario que dejaban a cabritos nacidos el mismo día con edad "0 meses" o "—".
+  const m = nacimiento.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  const nac = m
+    ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+    : new Date(nacimiento)
   if (Number.isNaN(nac.getTime())) return "Sin fecha"
-  const diffMs = Math.max(Date.now() - nac.getTime(), 0)
-  const diffYears = diffMs / (1000 * 60 * 60 * 24 * 365.25)
-  if (diffYears < 1) {
-    const meses = Math.max(Math.floor(diffMs / (1000 * 60 * 60 * 24 * 30.4375)), 0)
-    return `${meses} ${meses === 1 ? "mes" : "meses"}`
+  const diffMs = Date.now() - nac.getTime()
+  if (diffMs < 0) return "Sin fecha"
+  const dias = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  if (dias < 1) return "Hoy"
+  if (dias < 14) return `${dias} ${dias === 1 ? "día" : "días"}`
+  if (dias < 60) {
+    const semanas = Math.floor(dias / 7)
+    return `${semanas} ${semanas === 1 ? "semana" : "semanas"}`
   }
-  return `${diffYears.toFixed(1)} años`
+  const meses = Math.floor(dias / 30.4375)
+  if (meses < 12) return `${meses} ${meses === 1 ? "mes" : "meses"}`
+  const anios = dias / 365.25
+  return `${anios.toFixed(1)} años`
 }
 
 export class CabrasApiError extends Error {
@@ -42,6 +56,7 @@ type CabraRow = {
   id: string
   caravana: string
   nacimiento: string
+  sexo: Sexo | null
   estado: EstadoReproductivo
   partos: number
   promedio: number | string
@@ -49,6 +64,7 @@ type CabraRow = {
   produccion: Cabra["produccion"] | null
   historial_partos: Cabra["historialPartos"] | null
   sanidad: Cabra["sanidad"] | null
+  pesos: Cabra["pesos"] | null
   crias: string[] | null
   observaciones: string | null
 }
@@ -59,6 +75,7 @@ export function mapCabraRow(row: CabraRow): Cabra {
     caravana: row.caravana,
     nacimiento: row.nacimiento,
     edad: calcularEdad(row.nacimiento),
+    sexo: row.sexo ?? "Hembra",
     estado: row.estado,
     partos: row.partos,
     promedio: Number(row.promedio),
@@ -66,6 +83,7 @@ export function mapCabraRow(row: CabraRow): Cabra {
     produccion: row.produccion ?? [],
     historialPartos: row.historial_partos ?? [],
     sanidad: row.sanidad ?? [],
+    pesos: row.pesos ?? [],
     crias: row.crias ?? [],
     observaciones: row.observaciones ?? "",
   }
@@ -108,6 +126,16 @@ export function parseCabraBody(body: any, opts: { partial?: boolean } = {}) {
     throw new CabrasApiError("Estado requerido")
   }
 
+  if (has("sexo")) {
+    const v = String(body.sexo ?? "").trim()
+    if (!sexos.includes(v as Sexo)) {
+      throw new CabrasApiError("Sexo inválido (Hembra o Macho)")
+    }
+    out.sexo = v
+  } else if (!partial) {
+    out.sexo = "Hembra"
+  }
+
   if (has("partos")) {
     const n = Number(body.partos)
     if (!Number.isFinite(n) || n < 0) {
@@ -144,11 +172,20 @@ export function parseCabraBody(body: any, opts: { partial?: boolean } = {}) {
     out.crias = body.crias.map((c: unknown) => String(c))
   }
 
-  // Los jsonb pesados (produccion, historial_partos, sanidad) los aceptamos
+  // Los jsonb pesados (produccion, historial_partos, sanidad, pesos) los aceptamos
   // tal cual si vienen, sin validación estructural por ahora.
   if (has("produccion")) out.produccion = body.produccion ?? []
   if (has("historialPartos")) out.historial_partos = body.historialPartos ?? []
   if (has("sanidad")) out.sanidad = body.sanidad ?? []
+  if (has("pesos")) {
+    if (!Array.isArray(body.pesos)) {
+      throw new CabrasApiError("pesos debe ser array")
+    }
+    out.pesos = body.pesos.map((p: any) => ({
+      fecha: String(p?.fecha ?? ""),
+      kg: Number(p?.kg) || 0,
+    }))
+  }
 
   return out
 }

@@ -1,12 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Check, Pencil, Plus, X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useSharedState } from "@/lib/use-shared-state"
 
 type Item = { zona: string; frecuencia: string; hecho: boolean }
-
-const STORAGE_KEY = "fca:limpieza"
 
 const inicial: Item[] = [
   { zona: "Sala de ordeño", frecuencia: "Diaria", hecho: false },
@@ -17,30 +16,12 @@ const inicial: Item[] = [
   { zona: "Arbol", frecuencia: "Tras recolección", hecho: false },
 ]
 
-function load(): Item[] {
-  if (typeof window === "undefined") return inicial
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (!raw) return inicial
-    return JSON.parse(raw) as Item[]
-  } catch {
-    return inicial
-  }
-}
-
 export function LimpiezaView() {
-  const [items, setItems] = useState<Item[]>(inicial)
+  const { state: items, setState: setItems, status, error } = useSharedState<Item[]>(
+    "limpieza",
+    inicial,
+  )
   const [editing, setEditing] = useState(false)
-
-  useEffect(() => {
-    setItems(load())
-  }, [])
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
-    }
-  }, [items])
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-8 md:px-10">
@@ -60,6 +41,13 @@ export function LimpiezaView() {
           {editing ? "Listo" : "Editar"}
         </button>
       </div>
+
+      {status === "loading" && (
+        <p className="mt-4 text-sm text-muted-foreground">Sincronizando…</p>
+      )}
+      {status === "error" && (
+        <p className="mt-4 text-sm text-destructive">{error}</p>
+      )}
 
       <ul className="mt-6 flex flex-col gap-2">
         {items.map((it, i) => (

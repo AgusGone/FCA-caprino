@@ -1,11 +1,15 @@
 // --- TIPOS ---
 export type EstadoReproductivo = "En lactancia" | "Gestante" | "Seca" | "Vacía" | "Cabrita";
+export type Sexo = "Hembra" | "Macho";
+
+export type PesoEntry = { fecha: string; kg: number };
 
 export type Cabra = {
   id: string;
   caravana: string;
   nacimiento: string;
   edad: string;
+  sexo: Sexo;
   estado: EstadoReproductivo;
   partos: number;
   promedio: number;
@@ -13,8 +17,9 @@ export type Cabra = {
   produccion: Array<{ mes: string; litros: number }>;
   historialPartos: Array<{ fecha: string; crias: number; observacion: string }>;
   sanidad: Array<{ fecha: string; evento: string; detalle: string }>;
+  pesos: PesoEntry[];
   crias: string[];
-  observaciones: string; // <--- AGREGA ESTO
+  observaciones: string;
 };
 
 // --- DATOS ---
