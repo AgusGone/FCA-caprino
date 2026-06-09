@@ -292,7 +292,19 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
   return (
     <div className="flex h-full flex-col">
       <header className="flex items-center justify-between gap-4 px-5 py-5 md:px-8">
-        <h1 className="text-xl font-semibold tracking-tight">Fichas de cabras</h1>
+        <div className="flex items-center gap-6">
+          <h1 className="text-xl font-semibold tracking-tight">Fichas de cabras</h1>
+          <div className="hidden items-center gap-4 text-sm text-muted-foreground sm:flex">
+            <span className="inline-flex items-center gap-2">
+              <span className="size-2.5 rounded-full bg-green-500" />
+              Cabrita
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="size-2.5 rounded-full bg-yellow-400" />
+              Cabra
+            </span>
+          </div>
+        </div>
         <div className="flex items-center gap-4">
           <span className="hidden text-sm text-muted-foreground sm:inline">
             {cabras.length} animales
