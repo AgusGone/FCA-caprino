@@ -291,10 +291,10 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex items-center justify-between gap-4 px-5 py-5 md:px-8">
-        <div className="flex items-center gap-6">
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-5 md:px-8">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
           <h1 className="text-xl font-semibold tracking-tight">Fichas de cabras</h1>
-          <div className="hidden items-center gap-4 text-sm text-muted-foreground sm:flex">
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-2">
               <span className="size-2.5 rounded-full bg-green-500" />
               Cabrita
