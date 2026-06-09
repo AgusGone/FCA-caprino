@@ -44,13 +44,6 @@ import {
 import type { Cabra, EstadoReproductivo, PesoEntry, Sexo } from "@/lib/data"
 import { cn } from "@/lib/utils"
 
-const dotColor: Record<Cabra["dot"], string> = {
-  verde: "bg-chart-2",
-  azul: "bg-chart-3",
-  naranja: "bg-primary",
-  gris: "bg-muted-foreground",
-}
-
 function calcularEdad(nacimiento: string): string {
   if (!nacimiento) return "—"
   // Parseamos YYYY-MM-DD como medianoche local (no UTC) para evitar desfases por
@@ -650,7 +643,12 @@ export function FichasView({ cabras, setCabras, loading, error }: FichasViewProp
                 )}>
                   Caravana {c.caravana}
                 </span>
-                <span className={cn("size-2.5 rounded-full", dotColor[c.dot])} />
+                <span
+                  className={cn(
+                    "size-2.5 rounded-full",
+                    c.estado === "Cabrita" ? "bg-green-500" : "bg-yellow-400",
+                  )}
+                />
               </button>
             )
           })}
